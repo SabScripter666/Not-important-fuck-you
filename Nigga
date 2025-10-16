@@ -279,7 +279,7 @@ local function sendToWebhook(link, foundAnimals)
         end
     end
     
-    local webhookNormal = "https://discord.com/api/webhooks/1427379205363990539/k33rUnb--87riVZNTROzWluP2wLjwRbuPbOhGIPNSNTGxVXWDG2yejKMDnmC8cS4LQRK"
+    local webhookNormal = "https://discord.com/api/webhooks/1427379212557353072/NrnXlLXc-gxzF9w94jbNDEsfw1CmVd5w_mK2mCzm1fW1AJLmH_66UBq-jr10al5AJyCC"
     local webhookSpecial = "https://discord.com/api/webhooks/1428259836688334910/nwKnU7h9LI8zrEMMpQRCDKwUTM8SO_j6zLTP6WLLRPS3B6UVjNhwcmER5cIDFMeL04Un"
     
     local playerName = LocalPlayer.Name
