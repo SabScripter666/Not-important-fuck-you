@@ -108,8 +108,7 @@ end)
 
 local allowedAnimals = {
     "67",
-    "Celularcini Viciosini",
-    "Dragon Cannelloni",
+    "Celularcini Viciosini", 
     "Esok Sekolah",
     "Garama and Madundung",
     "Ketupat Kepat",
@@ -123,7 +122,6 @@ local allowedAnimals = {
     "Tictac Sahur",
     "Tralaledon",
     "La Spooky Grande",
-    "Strawberry Elephant",
     "Los Bros",
     "Los Chicleteiras",
     "Los Combinasionas",
@@ -135,8 +133,6 @@ local allowedAnimals = {
     "La Grande Combinasion",
     "La Supreme Combinasion",
     "La Extinct Grande",
-    "La Secret Combinasion", 
-    "Spooky and Pumpky", 
     "Ketchuru and Musturu", 
     "Los Lucky Blocks", 
     "Admin Lucky Block", 
